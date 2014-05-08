@@ -1,0 +1,49 @@
+!obj:pylearn2.models.mlp.MLP {
+    nvis: &x_dim 10,
+    layers: [
+        !obj:pylearn2.models.mlp.Tanh {
+            layer_name: "encoding_layer_q",
+            dim: &h_dim 2,
+            irange: 0.1
+        },
+        !obj:pylearn2.models.mlp.CompositeLayer {
+            layer_name: "composite_layer_q",
+            layers: [
+                !obj:pylearn2.models.mlp.Tanh {
+                    layer_name: "mean_layer_q",
+                    dim: &z_dim 5,
+                    irange: .01
+                },
+                !obj:pylearn2.models.mlp.Tanh {
+                    layer_name: "sig_layer_q",
+                    dim: *z_dim,
+                    irange: .01
+                }
+            ]
+        },
+        !obj:mlp.SamplingLayer {
+            layer_name: "sampling_layer"
+        },
+        !obj:pylearn2.models.mlp.Tanh {
+            layer_name: "encoding_layer_p",
+            dim: *h_dim,
+            irange: 0.1
+        },
+        !obj:pylearn2.models.mlp.CompositeLayer {
+            layer_name: "composite_layer_p",
+            layers: [
+                !obj:pylearn2.models.mlp.Tanh {
+                    layer_name: "mean_layer_p",
+                    dim: *x_dim,
+                    irange: .01
+                },
+                !obj:pylearn2.models.mlp.Tanh {
+                    layer_name: "sig_layer_p",
+                    dim: *x_dim,
+                    irange: .01
+                }
+            ]
+        }
+    ]
+}
+
