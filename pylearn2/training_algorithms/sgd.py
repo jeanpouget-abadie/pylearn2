@@ -1,4 +1,5 @@
 from __future__ import division
+import pdb
 """
 Stochastic Gradient Descent and related functionality such as
 learning rate adaptation, momentum, and Polyak averaging.
@@ -417,6 +418,9 @@ class SGD(TrainingAlgorithm):
             for callback in on_load_batch:
                 callback(*batch)
             self.sgd_update(*batch)
+            #_ = [x.get_value() for x in self.params]
+            #print _
+            #pdb.set_trace()
             # iterator might return a smaller batch if dataset size
             # isn't divisible by batch_size
             # Note: if data_specs[0] is a NullSpace, there is no way to know

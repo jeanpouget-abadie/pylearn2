@@ -15,7 +15,6 @@ import warnings
 import numpy as np
 from theano import config
 from theano.compat.python2x import OrderedDict
-from theano.gof.op import get_debug_values
 from theano.printing import Print
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 import theano.tensor as T
@@ -496,8 +495,10 @@ class MLP(Layer):
 
     @wraps(Layer.get_monitoring_channels)
     def get_monitoring_channels(self, data):
-
-        X, Y = data
+        """
+        THIS FUNCTION WAS MODIFIED FOR THE PURPOSES OF IMPLEMENTING THE VARIATIONAL AUTOENCODER
+        """
+        X, = data
         state = X
         rval = OrderedDict()
 
@@ -516,8 +517,6 @@ class MLP(Layer):
                 rval[layer.layer_name+'_'+key] = value
             state = layer.fprop(state)
             args = [state]
-            if layer is self.layers[-1]:
-                args.append(Y)
             ch = layer.get_monitoring_channels_from_state(*args)
             if not isinstance(ch, OrderedDict):
                 raise TypeError(str((type(ch), layer.layer_name)))
@@ -538,6 +537,7 @@ class MLP(Layer):
 
     def get_monitoring_data_specs(self):
         """
+        THIS FUNCTION WAS MODIFIED WAS THE PURPOSE OF THE VARIATIONAL AUTOENCODER
         Returns data specs requiring both inputs and targets.
 
         Returns
@@ -545,9 +545,11 @@ class MLP(Layer):
         data_specs: TODO
             The data specifications for both inputs and targets.
         """
-        space = CompositeSpace((self.get_input_space(),
-                                self.get_output_space()))
-        source = (self.get_input_source(), self.get_target_source())
+        space = CompositeSpace((self.get_input_space(),))
+        source = (self.get_input_source(),)        
+        # space = CompositeSpace((self.get_input_space(),
+        #                         self.get_output_space()))
+        # source = (self.get_input_source(), self.get_target_source())
         return (space, source)
 
     @wraps(Layer.get_params)
@@ -3762,6 +3764,9 @@ class CompositeLayer(Layer):
         self.__dict__.update(locals())
         del self.self
 
+    def get_monitoring_channels(self):
+        return []
+
     @wraps(Layer.set_input_space)
     def set_input_space(self, space):
 
@@ -3960,6 +3965,26 @@ class WindowLayer(Layer):
     @wraps(Layer.get_monitoring_channels)
     def get_monitoring_channels(self):
         return []
+
+
+class SamplingLayer(Layer):
+    def __init__(self, layer_name):
+        super(SamplingLayer, self).__init__()
+        self.layer_name = layer_name
+        self._params = []
+
+    def get_monitoring_channels(self):
+        return []
+
+    def fprop(self, state_below):
+        return state_below[0] + T.exp(state_below[1] / 2.) * self.mlp.rng.normal()
+
+    def set_input_space(self, space):
+        assert isinstance(space, CompositeSpace)
+        assert len(space.components) == 2
+        assert space.components[0] == space.components[1]
+
+        self.output_space = VectorSpace(dim=space.components[0].dim)
 
 
 def generate_dropout_mask(mlp, default_include_prob=0.5,

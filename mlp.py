@@ -20,9 +20,8 @@ class SamplingLayer(Layer):
 
         self.output_space = VectorSpace(dim=space.components[0].dim)
 
-class VariationalCost(Cost):
-    def __init__(self):
-        pass
+
+class GaussianVariationalCost(Cost):
 
     def expr(self, model, data):
         temp = data
@@ -37,3 +36,4 @@ class VariationalCost(Cost):
         prod_2 = tensor.dot(tensor.exp(- log_sig2_x), tensor.transpose(tensor.sqr(data - mean_x))) 
         likl = (coef_1 * tensor.exp(- prod_2)).diagonal()
         return kl - likl
+
