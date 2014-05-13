@@ -3977,7 +3977,11 @@ class SamplingLayer(Layer):
         return []
 
     def fprop(self, state_below):
-        return state_below[0] + T.exp(state_below[1] / 2.) * self.mlp.rng.normal()
+        if not hasattr(self, 'theano_rng'):
+            self.theano_rng = MRG_RandomStreams(max(self.mlp.rng.randint(2 ** 15), 1))
+
+        return state_below[0] + T.exp(state_below[1] / 2.) * self.theano_rng.normal(size=state_below[0].shape)
+
 
     def set_input_space(self, space):
         assert isinstance(space, CompositeSpace)

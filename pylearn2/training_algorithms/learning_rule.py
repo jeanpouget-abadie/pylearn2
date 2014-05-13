@@ -203,10 +203,12 @@ class AdaDelta(LearningRule):
         paper.
     """
 
-    def __init__(self, decay=0.95):
+    def __init__(self, decay=0.95, eps=1e-6):
         assert decay >= 0.
         assert decay < 1.
+        assert eps > 0.
         self.decay = decay
+        self.epsilon = eps
 
     def add_channels_to_monitor(self, monitor, monitoring_dataset):
         """
@@ -242,8 +244,8 @@ class AdaDelta(LearningRule):
 
             # Compute update
             epsilon = lr_scalers.get(param, 1.) * learning_rate
-            rms_dx_tm1 = T.sqrt(mean_square_dx + epsilon)
-            rms_grad_t = T.sqrt(new_mean_squared_grad + epsilon)
+            rms_dx_tm1 = T.sqrt(mean_square_dx + self.epsilon)
+            rms_grad_t = T.sqrt(new_mean_squared_grad + self.epsilon)
             delta_x_t = - rms_dx_tm1 / rms_grad_t * grads[param]
 
             # Accumulate updates

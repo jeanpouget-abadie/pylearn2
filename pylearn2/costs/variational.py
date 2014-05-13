@@ -28,8 +28,9 @@ class BernoulliVariationalCost(DefaultDataSpecsMixin, Cost):
             temp = model.layers[i].fprop(temp)
             if isinstance(model.layers[i], CompositeLayer):
                 param_list.append(temp)
+        #import ipdb; ipdb.set_trace()
         (mean_z, log_sig2_z), (bernoulli_x,) = param_list
-        kl =  - .5 * tensor.mean(1 + log_sig2_z - tensor.sqr(mean_z) - tensor.exp(log_sig2_z))
-        likl = tensor.dot(tensor.transpose(data), tensor.log(bernoulli_x)) + tensor.dot(tensor.transpose(1 - data), tensor.log((1 - bernoulli_x)))
+        kl =  - .5 * tensor.sum(1 + log_sig2_z - tensor.sqr(mean_z) - tensor.exp(log_sig2_z), axis=1)
+        #likl = tensor.dot(tensor.transpose(data), tensor.log(bernoulli_x)) + tensor.dot(tensor.transpose(1 - data), tensor.log((1 - bernoulli_x)))
+        likl = tensor.sum(data * tensor.log(bernoulli_x) + (1 - data) * tensor.log((1 - bernoulli_x)), axis=1)
         return tensor.mean(kl - likl)
-
