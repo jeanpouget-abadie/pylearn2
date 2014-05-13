@@ -8,6 +8,7 @@ import theano
 from theano import tensor
 T = tensor
 from pylearn2.utils.rng import make_np_rng
+from pylearn2.utils import sharedX
 
 # Shortcuts
 theano.config.warn.sum_div_dimshuffle_bug = False
@@ -223,6 +224,25 @@ class GaussianCorruptor(Corruptor):
                 (2. * (self.corruption_level ** 2.)))
         assert len(rval.type.broadcastable) == 1
         return rval
+
+
+class TrainableGaussianCorruptor(GaussianCorruptor):
+    def __init__(self, stdev, rng=2001):
+        super(TrainableGaussianCorruptor, self).__init__(stdev=stdev, rng=rng)
+        self.shared_stdev = sharedX(stdev)
+
+    def _corrupt(self, x):
+        noise = self.s_rng.normal(
+            size=x.shape,
+            avg=0.,
+            std=1.0,
+            dtype=theano.config.floatX
+        ) * self.shared_stdev
+
+        return noise + x
+
+    def get_params(self):
+        return [self.shared_stdev]
 
 
 class SaltPepperCorruptor(Corruptor):
