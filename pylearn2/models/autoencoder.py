@@ -370,6 +370,25 @@ class Autoencoder(Block, Model):
     get_output_space = Model.get_output_space
 
 
+class DivergenceGSN(Autoencoder):
+    def __init__(self, act_enc, act_dec, corruptor, decorruptor):
+        self.__dict__.update(locals())
+        del self.self
+        self.input_space = act_enc.input_space
+        self._params = []
+        for model in [act_enc, act_dec, corruptor, decorruptor]:
+            self._params.extend(model.get_params())
+
+    def encode(self, inputs):
+        return self.corruptor._corrupt(self.act_enc.fprop(inputs))
+
+    def decode(self, hiddens):
+        return self.decorruptor._corrupt(self.act_dec.fprop(hiddens))
+
+    def reconstruct(self, inputs):
+        return self.decode(self.encode(inputs))
+
+
 class DenoisingAutoencoder(Autoencoder):
     """
     A denoising autoencoder learns a representation of the input by
