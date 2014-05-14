@@ -8,6 +8,8 @@ import operator
 
 # Third-party imports
 import numpy
+import matplotlib.pyplot as plt
+from pylearn2.datasets.moons import Moons
 import theano
 from theano import tensor
 
@@ -370,23 +372,66 @@ class Autoencoder(Block, Model):
     get_output_space = Model.get_output_space
 
 
-class DivergenceGSN(Autoencoder):
-    def __init__(self, act_enc, act_dec, corruptor, decorruptor):
+# class DivergenceGSN(Autoencoder):
+#     def __init__(self, act_enc, act_dec, corruptor, decorruptor):
+#         self.fn = None
+#         self.cpu_only = False
+#         self.__dict__.update(locals())
+#         del self.self
+#         self.input_space = act_enc.input_space
+#         self._params = []
+#         for model in [act_enc, act_dec, corruptor, decorruptor]:
+#             self._params.extend(model.get_params())
+
+#     def encode(self, inputs):
+#         return self.corruptor._corrupt(self.act_enc.fprop(inputs))
+
+#     def decode(self, hiddens):
+#         return self.decorruptor._corrupt(self.act_dec.fprop(hiddens))
+
+#     def reconstruct(self, inputs):
+#         return self.decode(self.encode(inputs))
+
+
+class DivergenceGSN_local(Autoencoder):
+    def __init__(self, act_dec, corruptor, decorruptor):
+        self.fn = None
+        self.cpu_only = False
+        #self.act_enc = None
         self.__dict__.update(locals())
         del self.self
-        self.input_space = act_enc.input_space
+        self.input_space = act_dec.input_space
+        self.output_space = act_dec.get_output_space()
         self._params = []
-        for model in [act_enc, act_dec, corruptor, decorruptor]:
+        for model in [act_dec]:
             self._params.extend(model.get_params())
 
-    def encode(self, inputs):
-        return self.corruptor._corrupt(self.act_enc.fprop(inputs))
+    def corrupt(self, inputs):
+        return self.corruptor._corrupt(inputs)
 
     def decode(self, hiddens):
-        return self.decorruptor._corrupt(self.act_dec.fprop(hiddens))
+        return self.decorruptor._corrupt(hiddens + self.act_dec.fprop(hiddens))
+
+    def decode_predecorr(self, hiddens):
+        return hiddens + self.act_dec.fprop(hiddens)
 
     def reconstruct(self, inputs):
-        return self.decode(self.encode(inputs))
+        return self.decode(self.corrupt(inputs))
+
+    def show_examples(self):
+        print "this function is only for make_moons"
+        data = Moons(num_X=500, noise=.01).get_data()
+        plt.scatter(x=data[:,0], y=data[:,1], c='b')
+        th_data = theano.tensor.fmatrix()
+        corr = self.corrupt(th_data)
+        f = theano.function([th_data], corr, allow_input_downcast=True)
+        corr_v = f(data)
+        plt.scatter(x=corr_v[:,0], y=corr_v[:,1], c='k')
+        decorr = self.decode_predecorr(self.corrupt(th_data))
+        g = theano.function([th_data], decorr, allow_input_downcast=True)
+        decorr_v = g(data)
+        plt.scatter(x=decorr_v[:,0], y=decorr_v[:,1], c='r')
+        plt.show()
 
 
 class DenoisingAutoencoder(Autoencoder):
