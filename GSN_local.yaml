@@ -20,15 +20,15 @@
       nvis: 2,
     },
     corruptor: !obj:pylearn2.corruption.TrainableGaussianCorruptor {
-      stdev: 0.5,
+      stdev: 0.3,
     },
     decorruptor: !obj:pylearn2.corruption.TrainableGaussianCorruptor {
       stdev: 0.05,
     }
   },
   algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
-    learning_rate: 0.001,
-    batch_size: 50,
+    learning_rate: 0.005,
+    batch_size: 2,
     monitoring_dataset: {
       train: *X,
     }, cost: !obj:pylearn2.costs.autoencoder.DivergenceCost_local {
@@ -52,5 +52,5 @@
     }
   ],
   save_path: '${PYLEARN2_TRAIN_FILE_FULL_STEM}.pkl',
-  save_freq: 1,
+  save_freq: 50,
 }

@@ -233,10 +233,7 @@ class TransformerIterator(object):
             rval_space = transformer.get_output_space()
 
         def transform(X_batch):
-            if hasattr(transformer, 'reconstruct'):
-                rval = transformer.reconstruct(X_batch)
-            else:
-                rval = transformer.perform(X_batch)
+            rval = transformer.perform(X_batch)
             if rval_space != out_space:
                 rval = rval_space.np_format_as(rval, out_space)
             return rval

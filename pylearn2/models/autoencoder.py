@@ -400,6 +400,7 @@ class DivergenceGSN_local(Autoencoder):
         #self.act_enc = None
         self.__dict__.update(locals())
         del self.self
+        self.rng = make_np_rng(9001, which_method="randn")
         self.input_space = act_dec.input_space
         self.output_space = act_dec.get_output_space()
         self._params = []
@@ -418,6 +419,9 @@ class DivergenceGSN_local(Autoencoder):
     def reconstruct(self, inputs):
         return self.decode(self.corrupt(inputs))
 
+    def perform(self, inputs):
+        return self.decode(self.corrupt(inputs))
+
     def show_examples(self):
         print "this function is only for make_moons"
         data = Moons(num_X=500, noise=.01).get_data()
@@ -431,7 +435,36 @@ class DivergenceGSN_local(Autoencoder):
         g = theano.function([th_data], decorr, allow_input_downcast=True)
         decorr_v = g(data)
         plt.scatter(x=decorr_v[:,0], y=decorr_v[:,1], c='r')
-        plt.show()
+
+    def sample_markov_chain(self, n_markov_chains, n_steps):
+        print "this function is only for make moons"
+        numb_X = 500
+        data = Moons(num_X=numb_X, noise=.01).get_data()
+        rand_array_std = self.corruptor.shared_stdev * self.rng.normal(
+            size=(n_markov_chains, self.output_space.dim, n_steps)
+        )
+        rand_indices = numpy.random.randint(
+            low=0, high=numb_X, size=(n_markov_chains,)
+        )
+        init_x = data[rand_indices].astype('float32')
+        x_init = init_x
+        results, updates = theano.scan(fn=lambda i, x_init:
+            tensor.cast(self.decode_predecorr(x_init + rand_array_std[:, :, i]), 'float32'),
+            sequences=[tensor.arange(n_steps)],
+            outputs_info=x_init)
+        return results.dimshuffle(1, 0, 2), updates
+
+    def show_mc(self, n_markov_chains, n_steps):
+        plt.clf()
+        print "this function is only for make_moons"
+        data = Moons(num_X=500, noise=.01).get_data()
+        plt.scatter(x=data[:,0], y=data[:,1], c='b')
+        mc_spl, updates_0 = self.sample_markov_chain(n_markov_chains, n_steps)
+        f = theano.function([], mc_spl, updates=updates_0, allow_input_downcast=True)
+        result = f()
+        plt.scatter(result[:, :, 0], result[:, :, 1], cmap='hot', c=numpy.tile(numpy.linspace(
+            start=0, stop=1, num=len(result[0, :, 0])), (len(result[:, 0, 0]), 1)))
+
 
 
 class DenoisingAutoencoder(Autoencoder):

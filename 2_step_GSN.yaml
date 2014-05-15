@@ -30,7 +30,7 @@
     }
   },
   algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
-    learning_rate: 0.001,
+    learning_rate: 0.01,
     batch_size: 50,
     monitoring_dataset: {
       train: *train,
@@ -51,7 +51,7 @@
     !obj:pylearn2.training_algorithms.sgd.LinearDecayOverEpoch {
       start: 10,
       saturate: 200,
-      decay_factor: 0.01,
+      decay_factor: 0.001,
     }
   ],
   save_path: '${PYLEARN2_TRAIN_FILE_FULL_STEM}.pkl',
