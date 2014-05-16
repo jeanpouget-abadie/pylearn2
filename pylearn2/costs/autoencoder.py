@@ -13,83 +13,82 @@ from pylearn2.costs.cost import Cost, DefaultDataSpecsMixin
 from pylearn2.utils import sharedX
 from pylearn2.datasets.transformer_dataset import TransformerDataset
 
-class DivergenceCost(DefaultDataSpecsMixin, Cost):
-    def __init__(self, X, num_samples, num_encodings):
-        if not isinstance(X.get_data(), tuple):
-            X = sharedX(X.get_data())
-        elif X.get_data()[1] == 1:
-            print "implementing neighbors solution"
-            X = sharedX(X.get_data()[0])
-            neigh_indices = sharedX(X.get_data()[1])
-        else:
-            print "Original data set is tuple (possible labels) : Warning : (cost/autoencoder.py l22)"
-            X = sharedX(X.get_data()[0])
-        self.__dict__.update(locals())
-        self.rng = RandomStreams(1432)
-        del self.self
+# class DivergenceCost(DefaultDataSpecsMixin, Cost):
+#     def __init__(self, X, num_samples, num_encodings):
+#         if not isinstance(X.get_data(), tuple):
+#             X = sharedX(X.get_data())
+#         elif X.get_data()[1] == 1:
+#             print "implementing neighbors solution"
+#             X = sharedX(X.get_data()[0])
+#             neigh_indices = sharedX(X.get_data()[1])
+#         else:
+#             print "Original data set is tuple (possible labels) : Warning : (cost/autoencoder.py l22)"
+#             X = sharedX(X.get_data()[0])
+#         self.__dict__.update(locals())
+#         self.rng = RandomStreams(1432)
+#         del self.self
 
-    def sample(self, X, num_X, num_samples):
-        """
-        Parameters
-        ----------
-        X : 2d-array
-        num_X : number of times to sample
-        num_samples : number of samples to take
+#     def sample(self, X, num_X, num_samples):
+#         """
+#         Parameters
+#         ----------
+#         X : 2d-array
+#         num_X : number of times to sample
+#         num_samples : number of samples to take
 
-        Returns
-        -------
-        output : 3d-array
-            With axes [datapoint, samples, data]
-        """
-        sample_indices = self.rng.permutation(
-            size=(num_X,),
-            n=self.X.shape[0]
-        )[:, :num_samples]
-        return X[sample_indices]
+#         Returns
+#         -------
+#         output : 3d-array
+#             With axes [datapoint, samples, data]
+#         """
+#         sample_indices = self.rng.permutation(
+#             size=(num_X,),
+#             n=self.X.shape[0]
+#         )[:, :num_samples]
+#         return X[sample_indices]
 
-    def expr(self, model, data):
-        samples = self.sample(self.X, data.shape[0], self.num_samples)
-        flattened_samples = \
-            samples.dimshuffle(2, 0, 1).flatten(samples.ndim - 1).T
-        outputs = model.reconstruct(flattened_samples)
-        outputs = outputs.reshape((samples.shape[0],
-                                   samples.shape[1],
-                                   outputs.shape[1]))
-        likelihood = self.likelihood(data, outputs,
-                                     model.decorruptor.shared_stdev)
-        cost = -tensor.log(likelihood.mean(axis=1)).mean()
-        return cost
+#     def expr(self, model, data):
+#         samples = self.sample(self.X, data.shape[0], self.num_samples)
+#         flattened_samples = \
+#             samples.dimshuffle(2, 0, 1).flatten(samples.ndim - 1).T
+#         outputs = model.reconstruct(flattened_samples)
+#         outputs = outputs.reshape((samples.shape[0],
+#                                    samples.shape[1],
+#                                    outputs.shape[1]))
+#         likelihood = self.likelihood(data, outputs,
+#                                      model.decorruptor.shared_stdev)
+#         cost = -tensor.log(likelihood.mean(axis=1)).mean()
+#         return cost
 
-    def likelihood(self, data, outputs, stdev):
-        """
-        Parameters
-        ----------
-        data : 2-d array [batch, data]
-        outputs: 3-d array [batch, samples, data]
-        stdev : shared variable
+#     def likelihood(self, data, outputs, stdev):
+#         """
+#         Parameters
+#         ----------
+#         data : 2-d array [batch, data]
+#         outputs: 3-d array [batch, samples, data]
+#         stdev : shared variable
 
-        Returns
-        -------
-        likelihood : 2-d array [batch, samples]
-        """
-        distances = (data[:, None, :] - outputs).norm(2, axis=-1) ** 2
-        exponent = -distances / (2. * stdev ** 2.)
-        return 1. / tensor.sqrt(2 * np.pi * stdev ** 2) * tensor.exp(exponent)
+#         Returns
+#         -------
+#         likelihood : 2-d array [batch, samples]
+#         """
+#         distances = (data[:, None, :] - outputs).norm(2, axis=-1) ** 2
+#         exponent = -distances / (2. * stdev ** 2.)
+#         return 1. / tensor.sqrt(2 * np.pi * stdev ** 2) * tensor.exp(exponent)
 
-    def get_monitoring_channels(self, model, data):
-        channels = OrderedDict()
-        channels['cost'] = self.expr(model, data)
-        channels['enc_stdev'] = model.corruptor.shared_stdev
-        channels['dec_stdev'] = model.decorruptor.shared_stdev
-        # channels.update(model.act_enc.get_monitoring_channels((data, None)))
-        # channels.update(model.act_dec.get_monitoring_channels((data, None)))
-        return channels
+#     def get_monitoring_channels(self, model, data):
+#         channels = OrderedDict()
+#         channels['cost'] = self.expr(model, data)
+#         channels['enc_stdev'] = model.corruptor.shared_stdev
+#         channels['dec_stdev'] = model.decorruptor.shared_stdev
+#         # channels.update(model.act_enc.get_monitoring_channels((data, None)))
+#         # channels.update(model.act_dec.get_monitoring_channels((data, None)))
+#         return channels
 
 
 class DivergenceCost_local(DefaultDataSpecsMixin, Cost):
     def __init__(self, X, num_samples, num_encodings):
         if isinstance(X, TransformerDataset):
-            import ipdb; ipdb.set_trace()
             X = X.transformer.reconstruct(X.raw.get_data())
         else:
             if not isinstance(X.get_data(), tuple):

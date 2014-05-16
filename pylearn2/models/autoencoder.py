@@ -424,7 +424,7 @@ class DivergenceGSN_local(Autoencoder):
 
     def show_examples(self):
         print "this function is only for make_moons"
-        data = Moons(num_X=500, noise=.01).get_data()
+        data = Moons(num_X=1000, noise=.01).get_data()
         plt.scatter(x=data[:,0], y=data[:,1], c='b')
         th_data = theano.tensor.fmatrix()
         corr = self.corrupt(th_data)
