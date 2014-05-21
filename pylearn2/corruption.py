@@ -235,9 +235,11 @@ class TrainableGaussianCorruptor(GaussianCorruptor):
         super(TrainableGaussianCorruptor, self).__init__(stdev=stdev, rng=rng)
         self.shared_stdev = sharedX(stdev)
 
-    def _corrupt(self, x):
+    def _corrupt(self, x, shape=None):
+        if shape is None:
+            shape = x.shape
         noise = self.s_rng.normal(
-            size=x.shape,
+            size=shape,
             avg=0.,
             std=1.0,
             dtype=theano.config.floatX

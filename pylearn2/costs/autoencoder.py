@@ -87,55 +87,47 @@ from pylearn2.datasets.transformer_dataset import TransformerDataset
 
 
 class DivergenceCost_local(DefaultDataSpecsMixin, Cost):
-    def __init__(self, X, num_samples, num_encodings):
-        if isinstance(X, TransformerDataset):
-            X = X.transformer.reconstruct(X.raw.get_data())
-        else:
-            if not isinstance(X.get_data(), tuple):
-                X = sharedX(X.get_data())
-            elif X.get_data()[1] == 1:
-                print "implementing neighbors solution"
-                X = sharedX(X.get_data()[0])
-                neigh_indices = sharedX(X.get_data()[1])
-            else:
-                print "Original data set is tuple (possible labels) : Warning : (cost/autoencoder.py l22)"
-                X = sharedX(X.get_data()[0])
+    def __init__(self, X, num_encodings):
+        # if isinstance(X, TransformerDataset):
+        #     print "implementing transformer_dataset_solution"
+        #     X = X.transformer.reconstruct(X.raw.get_data())
+        # else:
+            # if not isinstance(X.get_data(), tuple):
+                # X = sharedX(X.get_data())
+            # elif X.get_data()[1] == 1:
+            #     print "implementing neighbors solution"
+            #     X = sharedX(X.get_data()[0])
+            #     neigh_indices = sharedX(X.get_data()[1])
+            # else:
+            #     print "Original data set is tuple (possible labels) : Warning : (cost/autoencoder.py l22)"
+            #     X = sharedX(X.get_data()[0])
+        X = sharedX(X.get_data())
         self.__dict__.update(locals())
         self.rng = RandomStreams(1432)
         del self.self
 
-    def sample(self, X, num_X, num_samples):
-        sample_indices = self.rng.permutation(
-            size=(num_X,),
-            n=self.X.shape[0]
-        )[:, :num_samples]
-        return X[sample_indices]
-
     def expr(self, model, data):
-        samples = self.sample(self.X, data.shape[0], self.num_samples)
-        flattened_samples = \
-            samples.dimshuffle(2, 0, 1).flatten(samples.ndim - 1).T
-        outputs = model.decode_predecorr(model.corrupt(flattened_samples))
-        outputs = outputs.reshape((samples.shape[0],
-                                   samples.shape[1],
-                                   outputs.shape[1]))
+        samples = self.X.dimshuffle(0, 'x', 1)
+        corr_samples = model.corrupt(samples, shape=(self.X.shape[0], self.num_encodings, self.X.shape[1]))
+        flattened_samples = corr_samples.dimshuffle(2, 0, 1).flatten(corr_samples.ndim - 1).T
+        outputs = model.decode_predecorr(flattened_samples)
+        outputs = outputs.reshape((self.X.shape[0],
+                                   self.num_encodings,
+                                   self.X.shape[1]))
         likelihood = self.likelihood(model, data, outputs,
                                      model.decorruptor.shared_stdev)
-        cost = -tensor.log(likelihood.mean(axis=1)).mean()
+        cost = -tensor.log(likelihood.mean(axis=-1).mean(axis=-2)).mean(axis=0)
         return cost
 
     def likelihood(self, model, data, outputs, stdev):
-        distances = (data[:, None, :] - (outputs)).norm(2, axis=-1) ** 2
+        distances = tensor.sqr(data[:, None, None, :] - (outputs[None, :, :, :])).sum(axis=-1)
         exponent = -distances / (2. * stdev ** 2.)
-        return 1. / tensor.sqrt(2 * np.pi * stdev ** 2) * tensor.exp(exponent)
+        return 1. / tensor.sqrt(2 * np.pi * (stdev ** 2)) * tensor.exp(exponent)
 
     def get_monitoring_channels(self, model, data):
         channels = OrderedDict()
-        channels['cost'] = self.expr(model, data)
         channels['enc_stdev'] = model.corruptor.shared_stdev
         channels['dec_stdev'] = model.decorruptor.shared_stdev
-        # channels.update(model.act_enc.get_monitoring_channels((data, None)))
-        # channels.update(model.act_dec.get_monitoring_channels((data, None)))
         return channels
 
 

@@ -407,19 +407,23 @@ class DivergenceGSN_local(Autoencoder):
         for model in [act_dec]:
             self._params.extend(model.get_params())
 
-    def corrupt(self, inputs):
-        return self.corruptor._corrupt(inputs)
+    def corrupt(self, inputs, shape=None):
+        return self.corruptor._corrupt(inputs, shape)
 
     def decode(self, hiddens):
+        pass
         return self.decorruptor._corrupt(hiddens + self.act_dec.fprop(hiddens))
 
     def decode_predecorr(self, hiddens):
         return hiddens + self.act_dec.fprop(hiddens)
 
     def reconstruct(self, inputs):
+        pass
         return self.decode(self.corrupt(inputs))
 
     def perform(self, inputs):
+        pass
+        import ipdb; ipd.set_trace()
         return self.decode(self.corrupt(inputs))
 
     def show_examples(self):
