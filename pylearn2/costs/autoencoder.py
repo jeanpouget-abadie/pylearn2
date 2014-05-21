@@ -116,7 +116,7 @@ class DivergenceCost_local(DefaultDataSpecsMixin, Cost):
                                    self.X.shape[1]))
         likelihood = self.likelihood(model, data, outputs,
                                      model.decorruptor.shared_stdev)
-        cost = -tensor.log(likelihood.mean(axis=-1).mean(axis=-2)).mean(axis=0)
+        cost = -tensor.log(likelihood.mean(axis=2).mean(axis=1)).mean(axis=0)
         return cost
 
     def likelihood(self, model, data, outputs, stdev):
