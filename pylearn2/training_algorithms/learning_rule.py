@@ -185,6 +185,34 @@ class MomentumAdjustor(TrainExtension):
         return self._init_momentum * (1.-alpha)+alpha*self.final_momentum
 
 
+class NoiseAdjustor(TrainExtension):
+    def __init__(self, final_noise, start, saturate):
+        if saturate < start:
+            raise TypeError("Noise can't saturate at its maximum value " +
+                            "before it starts increasing.")
+        self.__dict__.update(locals())
+        self._count = 0
+        self._initialized = False
+        del self.self
+
+    def on_monitor(self, model, dataset, algorithm):
+        noise = model.decorruptor.shared_stdev
+        if not self._initialized:
+            self._init_noise = noise.get_value()
+            self._initialized = True
+        self._count += 1
+        noise.set_value(np.cast[config.floatX](self.current_noise()))
+
+    def current_noise(self):
+        w = self.saturate - self.start
+
+        alpha = float(self._count - self.start) / float(w)
+        if alpha < 0.:
+            alpha = 0.
+        if alpha > 1.:
+            alpha = 1.
+        return self._init_noise * (1 - alpha) + alpha * self.final_noise
+
 class AdaDelta(LearningRule):
     """
     Implements the AdaDelta learning rule as described in:

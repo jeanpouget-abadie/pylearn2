@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from pylearn2.datasets.moons import Moons
 import theano
 from theano import tensor
+import itertools
 
 # Local imports
 from pylearn2.blocks import Block, StackedBlocks
@@ -20,6 +21,7 @@ from pylearn2.utils import sharedX
 from pylearn2.utils.theano_graph import is_pure_elemwise
 from pylearn2.utils.rng import make_np_rng, make_theano_rng
 from pylearn2.space import VectorSpace
+from pylearn2.utils import image, safe_zip
 
 theano.config.warn.sum_div_dimshuffle_bug = False
 
@@ -397,7 +399,6 @@ class DivergenceGSN_local(Autoencoder):
     def __init__(self, act_dec, corruptor, decorruptor):
         self.fn = None
         self.cpu_only = False
-        #self.act_enc = None
         self.__dict__.update(locals())
         del self.self
         self.rng = make_np_rng(9001, which_method="randn")
@@ -410,21 +411,21 @@ class DivergenceGSN_local(Autoencoder):
     def corrupt(self, inputs, shape=None):
         return self.corruptor._corrupt(inputs, shape)
 
-    def decode(self, hiddens):
-        pass
-        return self.decorruptor._corrupt(hiddens + self.act_dec.fprop(hiddens))
+    # def decode(self, hiddens):
+    #     pass
+    #     return self.decorruptor._corrupt(hiddens + self.act_dec.fprop(hiddens))
 
     def decode_predecorr(self, hiddens):
         return hiddens + self.act_dec.fprop(hiddens)
 
-    def reconstruct(self, inputs):
-        pass
-        return self.decode(self.corrupt(inputs))
+    # def reconstruct(self, inputs):
+    #     pass
+    #     return self.decode(self.corrupt(inputs))
 
-    def perform(self, inputs):
-        pass
-        import ipdb; ipd.set_trace()
-        return self.decode(self.corrupt(inputs))
+    # def perform(self, inputs):
+    #     pass
+    #     import ipdb; ipd.set_trace()
+    #     return self.decode(self.corrupt(inputs))
 
     def show_examples(self):
         print "this function is only for make_moons"
@@ -470,6 +471,51 @@ class DivergenceGSN_local(Autoencoder):
             start=0, stop=1, num=len(result[0, :, 0])), (len(result[:, 0, 0]), 1)))
 
 
+class DivergenceGSN_MNIST(Autoencoder):
+    def __init__(self, act_dec, corruptor, decorruptor):
+        self.fn = None
+        self.cpu_only = False
+        self.__dict__.update(locals())
+        del self.self
+        self.rng = make_np_rng(9001, which_method="randn")
+        self.input_space = act_dec.input_space
+        self.output_space = act_dec.get_output_space()
+        self._params = []
+        for model in [act_dec]:
+            self._params.extend(model.get_params())
+
+    def corrupt(self, inputs, shape=None):
+        return self.corruptor._corrupt(inputs, shape)
+
+    def decode_predecorr(self, hiddens):
+        return hiddens + self.act_dec.fprop(hiddens)
+
+    def get_samples(self, initial_data_point, n_steps):
+        x_init = initial_data_point
+        results, updates = theano.scan(fn=lambda i, x_init:
+            tensor.cast(self.decode_predecorr(self.corrupt(x_init)), 'float32'),
+            sequences=[tensor.arange(n_steps)],
+            outputs_info=x_init)
+        return results.dimshuffle(1, 0, 2), updates
+
+    def show_mc(self, initial_data_point, n_steps):
+        plt.clf()
+        print "this function is only for MNIST"
+        mc_spl, updates_0 = self.get_samples(initial_data_point, n_steps)
+        f = theano.function([], mc_spl, updates=updates_0, allow_input_downcast=True)
+        result = f()
+        result = list(itertools.chain(*result))
+        from pylearn2.datasets.mnist import MNIST
+        result = numpy.concatenate((initial_data_point, result))
+        result = numpy.vstack(result)
+        ############
+        print result[-1]
+        ###########
+        tiled = image.tile_raster_images(result,
+                                     img_shape=[28,28],
+                                     tile_shape=[50,50],
+                                     tile_spacing=(2,2))
+        image.save("gsn_MNIST_example.png", tiled)
 
 class DenoisingAutoencoder(Autoencoder):
     """

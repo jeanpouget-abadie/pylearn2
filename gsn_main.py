@@ -85,6 +85,7 @@ def test_sample_ae():
     history = gsn.get_samples([(0, mb_data)], walkback=500,
                               symbolic=False, include_first=True)
 
+   
     history = list(itertools.chain(*history))
     history = np.vstack(history)
 

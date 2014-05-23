@@ -2,45 +2,30 @@
   dataset: &train !obj:pylearn2.datasets.mnist.MNIST {
     which_set: 'train',
     start: 0,
-    stop:  20000,
+    stop:  100,
     shuffle: True
   },
-  model: !obj:pylearn2.models.autoencoder.DivergenceGSN {
-    act_enc: !obj:pylearn2.models.mlp.MLP {
+  model: !obj:pylearn2.models.autoencoder.DivergenceGSN_MNIST {
+    act_dec: !obj:pylearn2.models.mlp.MLP {
       layers: [
-        !obj:pylearn2.models.mlp.RectifiedLinear {
-          layer_name: 'enc_1',
-          dim: 500,
-          sparse_init: 15,
+        !obj:pylearn2.models.mlp.Sigmoid {
+          layer_name: 'dec_1',
+          dim: 200,
+          irange: 2.8,
         },
-        !obj:pylearn2.models.mlp.RectifiedLinear {
-          layer_name: 'enc_2',
-          dim: 500,
-          sparse_init: 15,
+        !obj:pylearn2.models.mlp.Linear {
+          layer_name: 'dec_2',
+          dim: 784,
+          irange: 0.7,
         }
       ],
       nvis: 784,
     },
-    act_dec: !obj:pylearn2.models.mlp.MLP {
-      layers: [
-        !obj:pylearn2.models.mlp.RectifiedLinear {
-          layer_name: 'dec_1',
-          dim: 784,
-          sparse_init: 15,
-        },
-        !obj:pylearn2.models.mlp.RectifiedLinear {
-          layer_name: 'dec_2',
-          dim: 784,
-          sparse_init: 15,
-        }
-      ],
-      nvis: 500,
-    },
     corruptor: !obj:pylearn2.corruption.TrainableGaussianCorruptor {
-      stdev: 1.0,
+      stdev: 0.2,
     },
     decorruptor: !obj:pylearn2.corruption.TrainableGaussianCorruptor {
-      stdev: 1.0,
+      stdev: 3,
     }
   },
   algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
@@ -48,36 +33,34 @@
     batch_size: 50,
     monitoring_dataset: {
       train: *train,
-      valid: !obj:pylearn2.datasets.mnist.MNIST {
-        which_set: 'train',
-        start: 10000,
-        stop:  11000,
-        shuffle: True
-      },
     },
-    cost: !obj:pylearn2.costs.autoencoder.DivergenceCost {
+    cost: !obj:pylearn2.costs.autoencoder.DivergenceCost_MNIST {
       X: *train,
-      num_samples: 1000,
-      num_encodings: 1,
+      num_encodings: 10,
     },
     learning_rule: !obj:pylearn2.training_algorithms.learning_rule.Momentum {
-      init_momentum: .5
+      init_momentum: 0,
     }
   },
   extensions: [
-    !obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
-      channel_name: 'valid_cost',
-      save_path: '${PYLEARN2_TRAIN_FILE_FULL_STEM}_best_cost.pkl'
-    }, !obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
-      channel_name: 'valid_dec_stdev',
-      save_path: '${PYLEARN2_TRAIN_FILE_FULL_STEM}_best_dec_stdev.pkl'
-    },
+    # !obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
+    #   channel_name: 'valid_cost',
+    #   save_path: '${PYLEARN2_TRAIN_FILE_FULL_STEM}_best_cost.pkl'
+    # }, !obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
+    #   channel_name: 'valid_dec_stdev',
+    #   save_path: '${PYLEARN2_TRAIN_FILE_FULL_STEM}_best_dec_stdev.pkl'
+    # },
     !obj:pylearn2.training_algorithms.learning_rule.MomentumAdjustor {
-      start: 1,
-      saturate: 10,
-      final_momentum: .99
+      start: 0,
+      saturate: 0,
+      final_momentum: 0,
+    },
+    !obj:pylearn2.training_algorithms.learning_rule.NoiseAdjustor {
+      start: 40,
+      saturate: 200,
+      final_noise: 2,
     }
   ],
   save_path: '${PYLEARN2_TRAIN_FILE_FULL_STEM}.pkl',
-  save_freq: 100,
+  save_freq: 10,
 }
