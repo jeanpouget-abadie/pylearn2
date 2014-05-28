@@ -2,7 +2,7 @@
   dataset: &train !obj:pylearn2.datasets.mnist.MNIST {
     which_set: 'train',
     start: 0,
-    stop:  50000,
+    stop:  500,
     shuffle: True
   },
   model: !obj:pylearn2.models.rbm.SumStatRBM {
@@ -23,14 +23,14 @@
     monitoring_dataset: {
       train: !obj:pylearn2.datasets.mnist.MNIST {
         which_set: 'train',
-        start: 50000,
-        stop:  60000,
+        start: 500,
+        stop:  600,
         shuffle: True
       },
     },
     cost: !obj:pylearn2.costs.cost.SumStatCost_BerBer {
       prior_z: !obj:pylearn2.datasets.prior_z.BernoulliPrior {
-          num_z : 500,
+          num_z : 100,
           dim_size : *n_hid,
         },
       },
