@@ -11,12 +11,14 @@ import warnings
 from itertools import izip
 
 import theano.tensor as T
+from theano import shared
 from theano.compat.python2x import OrderedDict
 
 from pylearn2.utils import safe_zip
 from pylearn2.utils import safe_union
 from pylearn2.space import CompositeSpace, NullSpace
 from pylearn2.utils.data_specs import DataSpecsMapping
+from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 
 
 logger = logging.getLogger(__name__)
@@ -752,3 +754,71 @@ def merge(left, right):
                                         right.on_load_batch)
 
     return merged
+
+
+class SumStatCost_BerBer(DefaultDataSpecsMixin, Cost):
+    def __init__(self, prior_z):
+        self.prior_z = shared(prior_z.get_data(), name='prior_z')
+        #self.__dict__.update(locals())
+        #self.rng = RandomStreams(123)
+        #del self.self
+
+    def expr(self, model, data):
+        vector_r = self.recognition_sumstat(model, data)
+        vector_g = self.generative_sumstat(model)
+        assert vector_g.ndim == vector_r.ndim
+        assert vector_g.ndim == 1
+        return T.sqr(vector_r - vector_g).sum() / T.cast(data.shape[0], 'int16')
+
+    def recognition_sumstat(self, model, data):
+        """
+        Input : 
+            Data 2-d array : 1st dimension : batch;
+                             2nd dimension : VectorSpace
+        Output :
+            2-d Vector : 1st dim: concat(cross_product (see order!), bias_v, bias_h)
+                         -> avg over batches
+        """
+        model = model.rbms[0]
+        bias_v = data
+        bias_h = model.mean_h_given_v(data)
+        activation_h = T.nnet.sigmoid(model.input_to_h_from_v(data))
+        activation_v = data
+        cross_product = activation_v[:, :, None] * activation_h[:, None, :]
+        cross_product_fl = cross_product.flatten(cross_product.ndim - 1)
+        assert cross_product_fl.ndim == 2
+        return T.concatenate((cross_product_fl, bias_v, bias_h), axis=1).mean(axis=0)
+
+    def generative_sumstat(self, model):
+        """
+        Input : 
+            self.prior_z 2-d array : 1st dimension : batch_z (size != x_batch_size)
+                                     2nd dimension : VectorSpace
+        Output :
+            2-d Vector : 1st dim : concat(cross_product (see order!), bias_v, bias_h)
+                         -> avg over prior_z size
+        """
+        model = model.rbms[1]
+        bias_h = self.prior_z
+        bias_v = model.mean_v_given_h(self.prior_z)
+        activation_v = T.nnet.sigmoid(model.input_to_v_from_h(self.prior_z))
+        activation_h = self.prior_z
+        cross_product = activation_v[:, :, None] * activation_h[:, None, :]
+        cross_product_fl = cross_product.flatten(cross_product.ndim - 1)
+        assert cross_product_fl.ndim == 2
+        return T.concatenate((cross_product_fl, bias_v, bias_h), axis=1).mean(axis=0)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

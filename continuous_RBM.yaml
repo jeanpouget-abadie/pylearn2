@@ -1,0 +1,26 @@
+!obj:pylearn2.train.Train {
+  dataset: &train !obj:pylearn2.datasets.mnist.MNIST {
+    which_set: 'train',
+    start: 0,
+    stop:  100,
+    shuffle: True
+  },
+  model: pylearn2.models.rbm.RBM{
+    nvis: 784,
+    nhid: 200,
+    irange: .2,
+    },
+  algorithm: !obj:pylearn2.training_algorithms.DefaultTrainingAlgorithm {
+    batch_size: 10,
+    monitoring_dataset: {
+      train: *train,
+    },
+    cost: !obj:pylearn2.costs.autoencoder.DivergenceCost_local {
+      X: *X,
+      num_encodings: 10,
+    }
+  },
+  extensions: [],
+  save_path: '${PYLEARN2_TRAIN_FILE_FULL_STEM}.pkl',
+  save_freq: 50,
+}

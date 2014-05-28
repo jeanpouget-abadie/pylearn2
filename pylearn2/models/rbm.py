@@ -22,7 +22,7 @@ from pylearn2.utils import as_floatX, safe_update, sharedX
 from pylearn2.models import Model
 from pylearn2.expr.nnet import inverse_sigmoid_numpy
 from pylearn2.linear.matrixmul import MatrixMul
-from pylearn2.space import VectorSpace
+from pylearn2.space import VectorSpace, CompositeSpace
 from pylearn2.utils import safe_union
 from pylearn2.utils.rng import make_np_rng, make_theano_rng
 theano.config.warn.sum_div_dimshuffle_bug = False
@@ -201,7 +201,6 @@ class BlockGibbsSampler(Sampler):
             # Moreover, it does not make sense for things like ssRBM.
             self.rbm.h_sample: _locals['h_mean']
         }
-
 
 class RBM(Block, Model):
     """
@@ -1699,3 +1698,34 @@ class _SGDOptimizer(_Optimizer):
             updates.append((p, p + s * h))
             updates.append((h, m * h - (1.0 - m) * gp))
         return updates
+
+class SumStatRBM(Model):
+    """
+    rbms[0] <- recognition RBM
+    rbms[1] <- generative RBM
+    """
+    def __init__(self, rbms):
+        super(SumStatRBM, self).__init__()
+        self.rbms = rbms
+
+    def get_params(self):
+        return self.rbms[0].get_params() + self.rbms[1].get_params()
+
+    def get_input_space(self):
+        return self.rbms[0].get_input_space()
+
+    def get_output_space(self):
+        return self.rbms[1].get_input_space()
+
+
+
+
+
+
+
+
+
+
+
+
+

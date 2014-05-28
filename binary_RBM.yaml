@@ -1,0 +1,27 @@
+!obj:pylearn2.train.Train {
+  dataset: &train !obj:pylearn2.datasets.mnist.MNIST {
+    which_set: 'train',
+    start: 0,
+    stop:  50000,
+    shuffle: True
+  },
+  model: !obj:pylearn2.models.rbm.RBM {
+    nvis: 784,
+    nhid: 200,
+    sml_gibbs_steps: 15,
+    },
+  algorithm: !obj:pylearn2.training_algorithms.default.DefaultTrainingAlgorithm {
+    batch_size: 10,
+    monitoring_dataset: {
+      train: !obj:pylearn2.datasets.mnist.MNIST {
+        which_set: 'train',
+        start: 50000,
+        stop:  60000,
+        shuffle: True
+      },
+    },
+  },
+  extensions: [],
+  save_path: '${PYLEARN2_TRAIN_FILE_FULL_STEM}.pkl',
+  save_freq: 2,
+}
