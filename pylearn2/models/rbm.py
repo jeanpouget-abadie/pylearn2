@@ -661,6 +661,10 @@ class RBM(Block, Model):
         v_mean = params[0]
         return as_floatX(rng.uniform(size=shape) < v_mean)
 
+    def sample_hiddens(self, params, shape, rng):
+        h_mean = params[0]
+        return as_floatX(rng.uniform(size=shape) < h_mean)
+
     def input_to_h_from_v(self, v):
         """
         Compute the affine function (linear map plus bias) that serves as
@@ -679,9 +683,8 @@ class RBM(Block, Model):
             Theano symbolic (or list thereof) representing the input to each
             hidden unit for each training example.
         """
-
         if isinstance(v, tensor.Variable):
-            return self.bias_hid + self.transformer.lmul(v)
+            return tensor.cast(self.bias_hid + self.transformer.lmul(v), 'float32')
         else:
             return [self.input_to_h_from_v(vis) for vis in v]
 

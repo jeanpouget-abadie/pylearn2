@@ -757,15 +757,17 @@ def merge(left, right):
 
 
 class SumStatCost_BerBer(DefaultDataSpecsMixin, Cost):
-    def __init__(self, prior_z):
+    def __init__(self, prior_z, sampling=True):
         self.prior_z = shared(prior_z.get_data(), name='prior_z')
-        #self.__dict__.update(locals())
-        #self.rng = RandomStreams(123)
-        #del self.self
+        self.sampling = sampling
+            ####Sampling necessary? Or alternatively can just put v = activation_v
+            ####Gets a better gradient! But theory might be wrong
+        self.rng = RandomStreams(123)
+
 
     def expr(self, model, data):
         vector_r = self.recognition_sumstat(model, data)
-        vector_g = self.generative_sumstat(model)
+        vector_g = self.generative_sumstat(model, data)
         assert vector_g.ndim == vector_r.ndim
         assert vector_g.ndim == 1
         return T.sqr(vector_r - vector_g).sum() / T.cast(data.shape[0], 'int16')
@@ -783,13 +785,18 @@ class SumStatCost_BerBer(DefaultDataSpecsMixin, Cost):
         bias_v = data
         bias_h = model.mean_h_given_v(data)
         activation_h = T.nnet.sigmoid(model.input_to_h_from_v(data))
-        activation_v = data
-        cross_product = activation_v[:, :, None] * activation_h[:, None, :]
+        v = data
+        if self.sampling == True:
+            ####Write this function
+            h = activation_h
+        else:
+            h = activation_h
+        cross_product = v[:, :, None] * h[:, None, :]
         cross_product_fl = cross_product.flatten(cross_product.ndim - 1)
         assert cross_product_fl.ndim == 2
         return T.concatenate((cross_product_fl, bias_v, bias_h), axis=1).mean(axis=0)
 
-    def generative_sumstat(self, model):
+    def generative_sumstat(self, model, data):
         """
         Input : 
             self.prior_z 2-d array : 1st dimension : batch_z (size != x_batch_size)
@@ -801,9 +808,15 @@ class SumStatCost_BerBer(DefaultDataSpecsMixin, Cost):
         model = model.rbms[1]
         bias_h = self.prior_z
         bias_v = model.mean_v_given_h(self.prior_z)
-        activation_v = T.nnet.sigmoid(model.input_to_v_from_h(self.prior_z))
-        activation_h = self.prior_z
-        cross_product = activation_v[:, :, None] * activation_h[:, None, :]
+        activation_v = model.mean_v_given_h(self.prior_z)
+        if self.sampling == True:
+            v = model.sample_visibles(params=[activation_v], 
+                                      shape=activation_v.shape,
+                                      rng=self.rng)
+        else:
+            v = activation_v
+        h = self.prior_z
+        cross_product = v[:, :, None] * h[:, None, :]
         cross_product_fl = cross_product.flatten(cross_product.ndim - 1)
         assert cross_product_fl.ndim == 2
         return T.concatenate((cross_product_fl, bias_v, bias_h), axis=1).mean(axis=0)
