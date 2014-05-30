@@ -299,9 +299,10 @@ class SGD(TrainingAlgorithm):
                                      dataset=monitoring_dataset)
 
             if self.learning_rule:
-                self.learning_rule.add_channels_to_monitor(
-                        self.monitor,
-                        monitoring_dataset)
+                print "watch out! learning rule has not add_chanels to monitor attr. This might be an error"
+                # self.learning_rule.add_channels_to_monitor(
+                #         self.monitor,
+                #         monitoring_dataset)
 
         params = list(model.get_params())
         assert len(params) > 0
@@ -344,8 +345,21 @@ class SGD(TrainingAlgorithm):
             log.info('\t' + param_name + ': ' + str(lr))
 
         if self.learning_rule:
-            updates.update(self.learning_rule.get_updates(
-                learning_rate, grads, lr_scalers))
+            params_recognition = list(model.rbms[0].get_params())
+            params_generative = list(model.rbms[1].get_params())
+            upd_recognition = dict(safe_zip(params_recognition, [param + learning_rate * \
+                                   lr_scalers.get(param, 1.) * grads[param]
+                                   for param in params_recognition]))
+            #Change parameters down the line
+            upd_generative = dict(safe_zip(params_generative, [param - learning_rate * \
+                                   lr_scalers.get(param, 1.) * grads[param]
+                                   for param in params_generative]))
+            upd = dict(upd_generative.items() + upd_recognition.items())
+            updates.update(upd)
+            assert len(upd) != len(upd_generative)
+            #Old code
+            # updates.update(self.learning_rule.get_updates(
+            #     learning_rate, grads, lr_scalers))
         else:
             # Use standard SGD updates with fixed learning rate.
             updates.update( dict(safe_zip(params, [param - learning_rate * \

@@ -14,6 +14,7 @@ def sample_from_chain(model, x, rng):
 
 
 def import_model():
+    #with open('binary_RBM_sumstat_puerhexperiment.pkl', 'r') as f:
     with open('binary_RBM_sumstat.pkl', 'r') as f:
         model = cPickle.load(f)
     mnist = MNIST('train')
@@ -101,10 +102,10 @@ def plot_samples(result, n_samples, n_steps):
                              img_shape=[28,28],
                              tile_shape=[n_steps, n_samples],
                              tile_spacing=(2,2))
-    image.save("binary_RBM_MNIST_example.png", tiled)
+    image.save("binary_RBM_MNIST_example_puerhexample.png", tiled)
 
 
 if __name__=='__main__':
-    #visualise_samples_from_v(n_samples=10, n_steps=100, which_model=1)
+    visualise_samples_from_v(n_samples=10, n_steps=100, which_model=1)
     #visualise_samples_from_h_simple(n_samples=10, which_model=1)
-    look_at_filters(0)
+    #look_at_filters(0)

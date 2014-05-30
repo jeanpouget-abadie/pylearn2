@@ -20,6 +20,7 @@
   algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
     learning_rate: 0.001,
     batch_size: 20,
+    learning_rule: True, # Do minimax or not
     monitoring_dataset: {
       train: !obj:pylearn2.datasets.mnist.MNIST {
         which_set: 'train',
@@ -28,9 +29,9 @@
         shuffle: True
       },
     },
-    cost: !obj:pylearn2.costs.cost.SumStatCost_BerBer {
+    cost: !obj:pylearn2.costs.cost.SumStatCost_BerBer_E_outside {
       prior_z: !obj:pylearn2.datasets.prior_z.BernoulliPrior {
-          num_z : 100,
+          num_z : 20,
           dim_size : *n_hid,
         },
       sampling: False,
