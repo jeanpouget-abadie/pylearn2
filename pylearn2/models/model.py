@@ -686,3 +686,21 @@ class Model(object):
         self.modify_updates(updates)
         f = function([], updates=updates)
         f()
+
+class LearnedStatMLP(Model):
+    """
+    rbms[0] <- recognition RBM
+    rbms[1] <- generative RBM
+    """
+    def __init__(self, rbms):
+        super(SumStatRBM, self).__init__()
+        self.rbms = rbms
+
+    def get_params(self):
+        return self.rbms[0].get_params() + self.rbms[1].get_params()
+
+    def get_input_space(self):
+        return self.rbms[0].get_input_space()
+
+    def get_output_space(self):
+        return self.rbms[1].get_input_space()

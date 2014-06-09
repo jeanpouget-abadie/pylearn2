@@ -29,7 +29,7 @@
         shuffle: True
       },
     },
-    cost: !obj:pylearn2.costs.cost.SumStatCost_BerBer_E_outside {
+    cost: !obj:pylearn2.costs.cost.SumStatCost_BerBer {
       prior_z: !obj:pylearn2.datasets.prior_z.BernoulliPrior {
           num_z : 20,
           dim_size : *n_hid,
