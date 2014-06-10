@@ -9,7 +9,7 @@ class Moons(DenseDesignMatrix):
         self.shape = (num_X, 2)
         if n_neighbors is not None:
             nbrs = NearestNeighbors(n_neighbors).fit(X)
-            distances, indices = nbrs.kneighbors(x)
+            distances, indices = nbrs.kneighbors(X)
             super(Moons, self).__init__(X=(X,1,indices))
         else:
             super(Moons, self).__init__(X=X)
