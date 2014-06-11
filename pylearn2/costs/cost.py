@@ -15,9 +15,11 @@ from theano.compat.python2x import OrderedDict
 
 from pylearn2.utils import safe_zip
 from pylearn2.utils import safe_union
+from pylearn2.utils import sharedX
 from pylearn2.space import CompositeSpace, NullSpace
 from pylearn2.utils.data_specs import DataSpecsMapping
 
+import numpy
 
 logger = logging.getLogger(__name__)
 
@@ -752,3 +754,51 @@ def merge(left, right):
                                         right.on_load_batch)
 
     return merged
+
+class kl_MNIST(DefaultDataSpecsMixin, Cost):
+    def __init__(self, X, n_neighbors):
+        digits = X.get_data()[0]
+        labels = X.get_data()[1]
+
+        X_digits = sharedX(digits)
+        X_labels = sharedX(labels)
+
+        flatlabels = labels.flatten()
+        index = numpy.argsort(flatlabels)
+        sortedlabels = labels[index]
+        sorteddigits = digits[index]
+        neigh = [numpy.zeros((10, n_neighbors, 784)),
+             numpy.zeros((10, n_neighbors, 1))]
+        for i in xrange(10):
+            k = 0
+            while sortedlabels[k] != i:
+                k = k+1
+            print k
+            for j in xrange(n_neighbors):
+                neigh[0][i, j] = sorteddigits[k + j]
+                neigh[1][i, j] = sortedlabels[k + j]
+
+        neigh_digits = sharedX(neigh[0])
+        neigh_labels = sharedX(neigh[1])
+        ####### this definitely needs to be changed to include corruption
+        neigh_digits_corr = neigh_digits
+        self.__dict__.update(locals())
+        #self.rng = RandomStreams(1432)
+        del self.self
+
+    def expr(self, model, data):
+        neigh_table = self.neigh_digits_corr[self.labels.flatten()]
+        fpropable_table = neigh_table.dimshuffle(2, 0, 1)
+        fpropable_table = fpropable_table.flatten(ndim = neigh_table.ndim -1).dimshuffle(1, 0)
+        output = model.fprop(fpropable_table)
+        import pdb; pdb.set_trace()
+        output = output.reshape(neigh_table.shape())
+        log_proba = self.X_digits[:, None, :] * T.log(neigh_table) + \
+                    (1 - self.X_digits[:, None, :]) * T.log(1 - neigh_table)
+        proba = T.exp(log_proba)
+        cost = T.log(proba.sum(axis=2).mean(axis=1)).mean(axis=0)
+        return cost
+
+    def get_monitoring_channels(self, model, data):
+        channels = OrderedDict()
+        return channels

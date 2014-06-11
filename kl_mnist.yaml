@@ -1,0 +1,37 @@
+!obj:pylearn2.train.Train {
+  dataset: &train !obj:pylearn2.datasets.mnist.MNIST {
+    which_set: 'train',
+    start: 0,
+    stop:  10000,
+    shuffle: True, # doesn't seem to matter all that much
+    binarize: True,
+  },
+  model: !obj:pylearn2.models.mlp.MLP {
+    layers: [
+      !obj:pylearn2.models.mlp.Sigmoid {
+        layer_name: 'dec_1',
+        dim: 200,
+        irange: 2.8,
+      }
+    ],
+    nvis: 784,
+  },
+  algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
+    learning_rate: 0.01,
+    batch_size: 50,
+    monitoring_dataset: {
+      train: !obj:pylearn2.datasets.mnist.MNIST {
+        which_set: 'train',
+        start: 0,
+        stop:  100,
+        shuffle: False,
+  },
+    },
+    cost: !obj:pylearn2.costs.cost.kl_MNIST {
+      X: *train,
+      n_neighbors: 500, # Double check with total size of training set
+    },
+  },
+  save_path: '${PYLEARN2_TRAIN_FILE_FULL_STEM}.pkl',
+  save_freq: 10,
+}

@@ -1,0 +1,43 @@
+!obj:pylearn2.train.Train {
+  dataset: &train !obj:pylearn2.datasets.mnist.MNIST {
+    which_set: 'train',
+    start: 0,
+    stop:  500,
+    shuffle: True
+  },
+  model: !obj:pylearn2.models.LearnedStatMLP {
+    rbms: [
+        !obj:pylearn2.models.rbm.RBM {
+          nvis: &n_vis 784,
+          nhid: &n_hid 200,
+        },
+        !obj:pylearn2.models.rbm.RBM {
+          nvis: 784,
+          nhid: *n_hid,
+        },
+    ],
+  },
+  algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
+    learning_rate: 0.001,
+    batch_size: 20,
+    learning_rule: True, # Do minimax or not
+    monitoring_dataset: {
+      train: !obj:pylearn2.datasets.mnist.MNIST {
+        which_set: 'train',
+        start: 500,
+        stop:  600,
+        shuffle: True
+      },
+    },
+    cost: !obj:pylearn2.costs.cost.SumStatCost_BerBer {
+      prior_z: !obj:pylearn2.datasets.prior_z.BernoulliPrior {
+          num_z : 100,
+          dim_size : *n_hid,
+        },
+      sampling: False,
+      },
+  },
+  extensions: [],
+  save_path: '${PYLEARN2_TRAIN_FILE_FULL_STEM}.pkl',
+  save_freq: 2,
+}
