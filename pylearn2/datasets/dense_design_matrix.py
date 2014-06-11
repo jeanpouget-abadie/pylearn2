@@ -12,13 +12,16 @@ __authors__ = "Ian Goodfellow and Mehdi Mirza"
 __copyright__ = "Copyright 2010-2012, Universite de Montreal"
 __credits__ = ["Ian Goodfellow"]
 __license__ = "3-clause BSD"
-__maintainer__ = "Ian Goodfellow"
-__email__ = "goodfeli@iro"
+__maintainer__ = "LISA Lab"
+__email__ = "pylearn-dev@googlegroups"
 import functools
 
 import logging
 import warnings
+
 import numpy as np
+
+from pylearn2.datasets import cache
 from pylearn2.utils.iteration import (
     FiniteDatasetIterator,
     resolve_iterator_class
@@ -454,10 +457,10 @@ class DenseDesignMatrix(Dataset):
 
             WRITEME
         """
-
         if d['design_loc'] is not None:
             if control.get_load_data():
-                d['X'] = np.load(d['design_loc'])
+                fname = cache.datasetCache.cache_file(d['design_loc'])
+                d['X'] = np.load(fname)
             else:
                 d['X'] = None
 
@@ -554,20 +557,23 @@ class DenseDesignMatrix(Dataset):
         if train_size != 0:
             size = train_size
         elif train_prop != 0:
-            size = np.round(self.num_examples * train_prop)
+            size = np.round(self.get_num_examples() * train_prop)
         else:
             raise ValueError("Initialize either split ratio and split size to "
                              "non-zero value.")
-        if size < self.num_examples-size:
-            dataset_iter = self.iterator(mode=_mode,
-                                         batch_size=(self.num_examples - size))
+        if size < self.get_num_examples() - size:
+            dataset_iter = self.iterator(
+                mode=_mode,
+                batch_size=(self.get_num_examples() - size))
             valid = dataset_iter.next()
-            train = dataset_iter.next()[:self.num_examples-valid.shape[0]]
+            train = dataset_iter.next()[:(self.get_num_examples()
+                                          - valid.shape[0])]
         else:
             dataset_iter = self.iterator(mode=_mode,
                                          batch_size=size)
             train = dataset_iter.next()
-            valid = dataset_iter.next()[:self.num_examples-train.shape[0]]
+            valid = dataset_iter.next()[:(self.get_num_examples()
+                                          - train.shape[0])]
         return (train, valid)
 
     def split_dataset_nfolds(self, nfolds=0):
@@ -681,7 +687,7 @@ class DenseDesignMatrix(Dataset):
 
         if 'default_rng' not in dir(self):
             self.default_rng = make_np_rng(None, [17, 2, 946],
-                    which_method="random_integers")
+                                           which_method="random_integers")
         self.rng = copy.copy(self.default_rng)
 
     def apply_preprocessor(self, preprocessor, can_fit=False):
@@ -809,8 +815,11 @@ class DenseDesignMatrix(Dataset):
                 dim = 1
             else:
                 dim = self.y.shape[-1]
-            if self.y_labels is not None:
+            # This is to support old pickled models
+            if getattr(self, 'y_labels', None) is not None:
                 y_space = IndexSpace(dim=dim, max_labels=self.y_labels)
+            elif getattr(self, 'max_labels', None) is not None:
+                y_space = IndexSpace(dim=dim, max_labels=self.max_labels)
             else:
                 y_space = VectorSpace(dim=dim)
             y_source = 'targets'
@@ -876,7 +885,13 @@ class DenseDesignMatrix(Dataset):
 
             WRITEME
         """
-        return self.X.shape[0]
+
+        warnings.warn("num_examples() is being deprecated, and will be "
+                      "removed around November 7th, 2014. `get_num_examples` "
+                      "should be used instead.",
+                      stacklevel=2)
+
+        return self.get_num_examples()
 
     def get_batch_design(self, batch_size, include_labels=False):
         """
@@ -933,6 +948,10 @@ class DenseDesignMatrix(Dataset):
             return rval, labels
 
         return rval
+
+    @functools.wraps(Dataset.get_num_examples)
+    def get_num_examples(self):
+        return self.X.shape[0]
 
     def view_shape(self):
         """
@@ -1470,9 +1489,18 @@ class DefaultViewConverter(object):
 
 def from_dataset(dataset, num_examples):
     """
-    .. todo::
+    Constructs a random subset of a DenseDesignMatrix
 
-        WRITEME
+    Parameters
+    ----------
+    dataset : DenseDesignMatrix
+    num_examples : int
+
+    Returns
+    -------
+    sub_dataset : DenseDesignMatrix
+        A new dataset containing `num_examples` examples randomly
+        drawn (without replacement) from `dataset`
     """
     try:
 
@@ -1493,7 +1521,7 @@ def from_dataset(dataset, num_examples):
                                      view_converter=dataset.view_converter)
         raise
 
-    rval = DenseDesignMatrix(topo_view=V, y=y)
+    rval = DenseDesignMatrix(topo_view=V, y=y, y_labels=dataset.y_labels)
     rval.adjust_for_viewer = dataset.adjust_for_viewer
 
     return rval
