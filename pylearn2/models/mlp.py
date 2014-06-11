@@ -29,6 +29,7 @@ from pylearn2.monitor import get_monitor_doc
 from pylearn2.expr.nnet import pseudoinverse_softmax_numpy
 from pylearn2.space import CompositeSpace
 from pylearn2.space import Conv2DSpace
+from pylearn2.space import IndexSpace
 from pylearn2.space import Space
 from pylearn2.space import VectorSpace
 from pylearn2.utils import function
@@ -380,6 +381,19 @@ class Layer(Model):
         """
         raise NotImplementedError(str(type(self)) + " does not implement "
                 "set_input_space.")
+
+class Identity(Layer):
+    def __init__(self, layer_name=None, **kwargs):
+        super(Identity, self).__init__(**kwargs)
+        self.layer_name = layer_name
+        self.output_space = IndexSpace(dim=1, max_labels=10)
+        self._params = []
+
+    def fprop(self, state_below):
+        return state_below
+
+    def set_input_space(self, space):
+        self.input_space = space
 
 
 class MLP(Layer):

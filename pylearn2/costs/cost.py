@@ -756,6 +756,7 @@ def merge(left, right):
     return merged
 
 class kl_MNIST(DefaultDataSpecsMixin, Cost):
+    supervised = True
     def __init__(self, X, n_neighbors):
         digits = X.get_data()[0]
         labels = X.get_data()[1]
@@ -767,36 +768,37 @@ class kl_MNIST(DefaultDataSpecsMixin, Cost):
         index = numpy.argsort(flatlabels)
         sortedlabels = labels[index]
         sorteddigits = digits[index]
-        neigh = [numpy.zeros((10, n_neighbors, 784)),
-             numpy.zeros((10, n_neighbors, 1))]
+        neigh_digits = numpy.zeros((10, n_neighbors, 784))
+        neigh_labels = numpy.zeros((10, n_neighbors, 1))
         for i in xrange(10):
             k = 0
             while sortedlabels[k] != i:
                 k = k+1
             print k
             for j in xrange(n_neighbors):
-                neigh[0][i, j] = sorteddigits[k + j]
-                neigh[1][i, j] = sortedlabels[k + j]
+                neigh_digits[i, j] = sorteddigits[k + j]
+                neigh_labels[i, j] = sortedlabels[k + j]
 
-        neigh_digits = sharedX(neigh[0])
-        neigh_labels = sharedX(neigh[1])
+        neigh_digits = sharedX(neigh_digits)
+        neigh_labels = sharedX(neigh_labels)
         ####### this definitely needs to be changed to include corruption
+
         neigh_digits_corr = neigh_digits
         self.__dict__.update(locals())
         #self.rng = RandomStreams(1432)
         del self.self
 
     def expr(self, model, data):
-        neigh_table = self.neigh_digits_corr[self.labels.flatten()]
+        X, Y = data
+        neigh_table = self.neigh_digits_corr[Y.flatten()]
         fpropable_table = neigh_table.dimshuffle(2, 0, 1)
         fpropable_table = fpropable_table.flatten(ndim = neigh_table.ndim -1).dimshuffle(1, 0)
-        output = model.fprop(fpropable_table)
-        import pdb; pdb.set_trace()
-        output = output.reshape(neigh_table.shape())
-        log_proba = self.X_digits[:, None, :] * T.log(neigh_table) + \
-                    (1 - self.X_digits[:, None, :]) * T.log(1 - neigh_table)
-        proba = T.exp(log_proba)
-        cost = T.log(proba.sum(axis=2).mean(axis=1)).mean(axis=0)
+        output = model.layers[0].fprop(fpropable_table)
+        output = output.reshape(neigh_table.shape)
+        proba = X[:, None, :] * neigh_table + \
+                    (1 - X[:, None, :]) * (1 - neigh_table)
+        proba = T.log(proba)
+        cost = T.mean(T.sum(proba, axis=2), axis=1).mean(axis=0)
         return cost
 
     def get_monitoring_channels(self, model, data):
