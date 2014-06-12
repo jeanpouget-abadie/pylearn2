@@ -797,8 +797,7 @@ class kl_MNIST(DefaultDataSpecsMixin, Cost):
         output = output.reshape(neigh_table.shape)
         proba = X[:, None, :] * neigh_table + \
                     (1 - X[:, None, :]) * (1 - neigh_table)
-        proba = T.log(proba)
-        cost = T.mean(T.sum(proba, axis=2), axis=1).mean(axis=0)
+        cost = T.mean(T.mean(T.sum(T.log(proba), axis=2), axis=1), axis=0)
         return cost
 
     def get_monitoring_channels(self, model, data):
