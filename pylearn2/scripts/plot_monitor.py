@@ -277,8 +277,9 @@ def main():
         fig.subplots_adjust(bottom=0.11 + 0.046 * len(final_codes))
 
         if options.out is None:
-          plt.show()
-        else:
+          # plt.show()
+          plt.savefig('plot_value_over_all_epochs.png')
+	else:
           plt.savefig(options.out)
 
         if not prompt:
